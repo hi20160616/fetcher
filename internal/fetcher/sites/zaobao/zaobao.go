@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"regexp"
 	"strings"
 	"time"
 
@@ -38,22 +39,13 @@ func setDate(p *Post) error {
 	if p.Err != nil {
 		return p.Err
 	}
-	if p.DOC == nil {
-		return fmt.Errorf("p.DOC is nil")
+	if p.Raw == nil {
+		return errors.New("zaobao: setDate: Raw is nil")
 	}
-	metas := htmldoc.MetasByProperty(p.DOC, "article:modified_time")
-	cs := []string{}
-	for _, meta := range metas {
-		for _, a := range meta.Attr {
-			if a.Key == "content" {
-				cs = append(cs, a.Val)
-			}
-		}
-	}
-	if len(cs) <= 0 {
-		return fmt.Errorf("zaobao setData got nothing.")
-	}
-	p.Date = cs[0]
+	re := regexp.MustCompile(`"dateModified":\s"(\d\d)/(\d\d)/(\d\d\d\d)\s-\s(\d\d):(\d\d)",`)
+	rs := re.FindAllSubmatch(p.Raw, -1)[0]
+	m, d, y, hh, mm := rs[1], rs[2], rs[3], rs[4], rs[5]
+	p.Date = fmt.Sprintf("%s-%s-%sT%s:%s:00+08:00", y, m, d, hh, mm)
 	return nil
 }
 
