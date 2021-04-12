@@ -4,10 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"regexp"
 	"strings"
 	"time"
 
-	"github.com/hi20160616/fetcher/internal/htmldoc"
+	htmldoc "github.com/hi20160616/exhtml"
 	"github.com/hi20160616/gears"
 	"golang.org/x/net/html"
 )
@@ -67,6 +68,7 @@ func setTitle(p *Post) error {
 	title := doc[0].FirstChild.Data
 	title = strings.TrimSpace(title)
 	gears.ReplaceIllegalChar(&title)
+	title = strings.ReplaceAll(title, " ｜ 德国之声 来自德国 介绍德国 ｜ DW", "")
 	p.Title = title
 	return nil
 }
@@ -96,23 +98,62 @@ func dw(p *Post) (string, error) {
 		return "", p.Err
 	}
 	if p.DOC == nil {
-		return "", fmt.Errorf("p.DOC is nil")
+		return "", errors.New("dw: p.DOC is nil")
+	}
+	if p.Raw == nil {
+		return "", errors.New("dw: p.Raw is nil")
 	}
 	doc := p.DOC
 	body := ""
-	// Fetch content nodes
+
+	// Fetch summary
+	re := regexp.MustCompile(`<p class="intro">(.*?)</p>`)
+	rs := re.FindAllSubmatch(p.Raw, -1)
+	if intro := string(rs[0][1]); intro != "" {
+		body += "> " + intro + "  \n\n" // if intro exist, append to body
+	}
+
+	// Fetch content
 	nodes := htmldoc.ElementsByTagAndClass(doc, "div", "longText")
 	if len(nodes) == 0 {
-		return "", errors.New("There is no tag named `<article>` from: " + p.URL.String())
+		return "", errors.New("dw: L118: nodes fetch error from: " + p.URL.String())
 	}
-	plist := htmldoc.ElementsByTag(nodes[0], "p")
+
+	spanMerge := func(n *html.Node) []*html.Node {
+		spans := htmldoc.ElementsByTag(n, "span")
+		for _, span := range spans {
+			if span.FirstChild != nil {
+				body += span.FirstChild.Data
+				if span.FirstChild.Data != span.LastChild.Data {
+					body += span.LastChild.Data
+				}
+			}
+		}
+		return spans
+	}
+
+	plist := htmldoc.ElementsByTag(nodes[0], "p", "h2")
 	for _, v := range plist {
 		if v.FirstChild == nil {
 			continue
 		} else {
-			body += v.FirstChild.Data + "  \n"
+			switch v.Data {
+			case "h2":
+				body += "\n ** "
+				if ss := spanMerge(v); len(ss) == 0 {
+					body += v.FirstChild.Data
+				}
+				body += " **   \n"
+			case "p":
+				if ss := spanMerge(v); len(ss) == 0 {
+					body += v.FirstChild.Data
+				}
+				body += "  \n"
+			default:
+				body += v.FirstChild.Data + "  \n"
+			}
 		}
 	}
-	// body = strings.ReplaceAll(body, "span  \n", "")
+	body = strings.ReplaceAll(body, "strong  \n", "")
 	return body, nil
 }
