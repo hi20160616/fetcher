@@ -35,7 +35,7 @@ func TestSetDate(t *testing.T) {
 	if err := setDate(p); err != nil {
 		t.Errorf("test SetPost err: %v", doc)
 	}
-	want := "2020-08-30T07:48:25+08:00"
+	want := "2021-04-07T00:00:00Z"
 	if p.Date != want {
 		t.Errorf("\ngot: %v\nwant: %v", p.Date, want)
 	}

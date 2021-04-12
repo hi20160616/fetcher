@@ -39,18 +39,16 @@ func setDate(p *Post) error {
 	if p.Err != nil {
 		return p.Err
 	}
-	if p.Title == "" {
-		return fmt.Errorf("p.Title is nil")
+	re := regexp.MustCompile(`articleChangeDateShort: "(11\d*?)",`)
+	rs := re.FindAllSubmatch(p.Raw, -1)
+	// verbose judgements for pass panic of index out of range.
+	if rs != nil && rs[0] != nil && len(rs[0]) > 1 && rs[0][1] != nil {
+		t, err := time.Parse("20060102", string(rs[0][1]))
+		if err != nil {
+			return err
+		}
+		p.Date = t.Format(time.RFC3339)
 	}
-	//focus on title like "港澳煞停接种德国BioNTech疫苗 | 德国之声 来自德国 介绍德国 | DW | 24.03.2021"
-	s := strings.Split(p.Title, "｜")
-	tmp := strings.TrimSpace(s[len(s)-1])
-	//transform date to RFC3339 format   "2006-01-02 15:04:05"
-	tm, err := time.Parse("02.01.2006", tmp)
-	if err != nil {
-		return fmt.Errorf("can not get Date")
-	}
-	p.Date = tm.Format(time.RFC3339)
 	return nil
 }
 
