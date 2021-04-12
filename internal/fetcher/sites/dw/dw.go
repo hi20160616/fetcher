@@ -1,7 +1,7 @@
 package dw
 
 import (
-	"errors"
+	"bytes"
 	"fmt"
 	"net/url"
 	"regexp"
@@ -10,6 +10,7 @@ import (
 
 	htmldoc "github.com/hi20160616/exhtml"
 	"github.com/hi20160616/gears"
+	"github.com/pkg/errors"
 	"golang.org/x/net/html"
 )
 
@@ -86,8 +87,12 @@ func setBody(p *Post) error {
 	if err != nil {
 		return err
 	}
-	h1 := fmt.Sprintf("# [%02d.%02d][%02d%02dH] %s", t.Month(), t.Day(), t.Hour(), t.Minute(), p.Title)
-	p.Body = h1 + "\n\n" + b + "\n\n原地址：" + p.URL.String()
+	tt := t.Format("# [02.01][1504H] " + p.Title)
+	u, err := url.QueryUnescape(p.URL.String())
+	if err != nil {
+		return errors.WithMessage(err, "dw: dw: setBody: url unescape err on: "+p.URL.String())
+	}
+	p.Body = tt + "\n\n" + b + "\n\n原地址：" + u
 	return nil
 }
 
@@ -106,8 +111,9 @@ func dw(p *Post) (string, error) {
 
 	// Fetch summary
 	re := regexp.MustCompile(`<p class="intro">(.*?)</p>`)
-	rs := re.FindAllSubmatch(p.Raw, -1)
-	if rs != nil {
+	raw := bytes.ReplaceAll(p.Raw, []byte("\n"), []byte(""))
+	rs := re.FindAllSubmatch(raw, -1)
+	if rs == nil {
 		return "", errors.New("dw: dw: intro match nothing.")
 	}
 	if intro := string(rs[0][1]); intro != "" {
