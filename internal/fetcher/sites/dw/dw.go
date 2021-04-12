@@ -126,6 +126,10 @@ func dw(p *Post) (string, error) {
 		return "", errors.New("dw: L118: nodes fetch error from: " + p.URL.String())
 	}
 
+	if nodes[0].FirstChild.NextSibling.Attr[0].Val == "col1" {
+		nodes[0].RemoveChild(nodes[0].FirstChild.NextSibling)
+	}
+
 	spanMerge := func(n *html.Node) []*html.Node {
 		spans := htmldoc.ElementsByTag(n, "span")
 		for _, span := range spans {
@@ -162,5 +166,7 @@ func dw(p *Post) (string, error) {
 		}
 	}
 	body = strings.ReplaceAll(body, "strong  \n", "")
+	body = strings.ReplaceAll(body, "em  \n", "")
+	body = strings.ReplaceAll(body, " ** \n **   \n", "")
 	return body, nil
 }
