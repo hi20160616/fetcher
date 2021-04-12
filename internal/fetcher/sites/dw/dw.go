@@ -39,7 +39,7 @@ func setDate(p *Post) error {
 	if p.Err != nil {
 		return p.Err
 	}
-	re := regexp.MustCompile(`articleChangeDateShort: "(11\d*?)",`)
+	re := regexp.MustCompile(`articleChangeDateShort: "(\d*?)",`)
 	rs := re.FindAllSubmatch(p.Raw, -1)
 	// verbose judgements for pass panic of index out of range.
 	if rs != nil && rs[0] != nil && len(rs[0]) > 1 && rs[0][1] != nil {
@@ -107,6 +107,9 @@ func dw(p *Post) (string, error) {
 	// Fetch summary
 	re := regexp.MustCompile(`<p class="intro">(.*?)</p>`)
 	rs := re.FindAllSubmatch(p.Raw, -1)
+	if rs != nil {
+		return "", errors.New("dw: dw: intro match nothing.")
+	}
 	if intro := string(rs[0][1]); intro != "" {
 		body += "> " + intro + "  \n\n" // if intro exist, append to body
 	}
