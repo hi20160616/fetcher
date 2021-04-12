@@ -65,9 +65,9 @@ func setTitle(p *Post) error {
 		return fmt.Errorf("there is no element <title>")
 	}
 	title := doc[0].FirstChild.Data
+	title = title[:strings.Index(title, "|")]
 	title = strings.TrimSpace(title)
 	gears.ReplaceIllegalChar(&title)
-	title = strings.ReplaceAll(title, " ｜ 德国之声 来自德国 介绍德国 ｜ DW", "")
 	p.Title = title
 	return nil
 }
